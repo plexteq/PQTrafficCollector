@@ -1,6 +1,6 @@
 # PQTrafficCollector
 
-[Build Status]: https://github.com/plexteq/PQTrafficCollector
+[Build Status](https://travis-ci.org/plexteq/PQTrafficCollector)
 
 # Usage
 
