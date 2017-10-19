@@ -1,30 +1,47 @@
 remoteurl=http://www.sqlite.org/2014
 sqlite=sqlite-autoconf-3080500
 
-pqtc: pqtc.cpp
-	g++ -O3 -std=c++0x -L/opt/sqlite/lib/ -I/opt/sqlite/include/ -lpthread -lsqlite3 -lpcap -lapr-1 -laprutil-1 pqtc.cpp -o pqtc
-prepare:
-	yum -y install apr apr-util apr-devel apr-util-devel sqlite sqlite-devel libpcap libpcap-devel
-	(cd /tmp ; rm -f $(sqlite).tar.gz; rm -Rf ./$(sqlite) ; wget $(remoteurl)/$(sqlite).tar.gz ; tar -zxf ./$(sqlite).tar.gz ; cd $(sqlite) ; ./configure --prefix /opt/sqlite ; make ; make install)
-	echo "/opt/sqlite/lib/" > /etc/ld.so.conf.d/sqlite.conf && ldconfig && echo "export PATH=\$$PATH:/opt/sqlite/bin" >> ~/.bashrc
-	cpan DBD::SQLite
-	cpan Math::Round
+CXX=g++
+OPTIMIZATION=-g -O0
+STD_MODE=-std=c++0x
+LDFLAGS=-Wall -Wl,-rpath,/usr/local/lib/gcc5/
+
+OBJ_FOLDER=objs/
+SOURCES=$(shell find src/ -name '*.cpp' -not -path "src/service/win32") 
+OBJECTS=$(patsubst src/%.cpp, $(OBJ_FOLDER)%.o, $(SOURCES))
+LIBS=-lpthread -lsqlite3 -lpcap -lapr-1 \
+-laprutil-1 -lexpat -lboost_system -lboost_filesystem -ljansson -llog4cpp
+INCLUDES=
+LINKER=
+EXECUTABLE=pqtc
+
+DIRS:=$(patsubst src/%, $(OBJ_FOLDER)/%, $(shell find src/ -type d))
+OBJS_DIRS:=$(shell mkdir -p $(DIRS))
+
+all:$(OBJECTS)	
+	${CXX} ${OPTIMIZATION} ${STD_MODE} \
+	${INCLUDES} ${LINKER} ${LDFLAGS} \
+	-o ${EXECUTABLE} ${OBJECTS} ${LIBS}
 	
 clean:
-	rm -f pqtc
+	rm -rf ${EXECUTABLE} $(OBJ_FOLDER)
 install:
-	mkdir -p /var/db/pqtc
-	cp -f ext/pqtc /etc/init.d/
-	cp -f pqtc /usr/bin/
+	mkdir -p /var/db/${EXECUTABLE}
+	cp -f ext/${EXECUTABLE} /etc/init.d/
+	cp -f ${EXECUTABLE} /usr/bin/
 	cp -f ext/gettop.pl /usr/bin/
-	test -f /usr/bin/pqtc && cp -f ext/check_ifutil.pl /etc/nagios/nvpn/
-	chkconfig pqtc on
-	service pqtc restart
+	test -f /usr/bin/${EXECUTABLE} && cp -f ext/check_ifutil.pl /etc/nagios/nvpn/
+	chkconfig ${EXECUTABLE} on
+	service ${EXECUTABLE} restart
 
 reinstall:
-	service pqtc stop
-	cp -f pqtc /usr/bin/
-	cp -f ext/pqtc /etc/init.d/
+	service ${EXECUTABLE} stop
+	cp -f ${EXECUTABLE} /usr/bin/
+	cp -f ext/${EXECUTABLE} /etc/init.d/
 	cp -f ext/gettop.pl /usr/bin/
 	cp -f ext/check_ifutil.pl /etc/nagios/nvpn/
-	service pqtc start
+	service ${EXECUTABLE} start
+
+
+$(OBJECTS): $(OBJ_FOLDER)%.o: src/%.cpp
+	$(CXX) $(OPTIMIZATION) $(STD_MODE) -c $< -o $@

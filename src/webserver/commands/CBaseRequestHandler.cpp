@@ -1,0 +1,78 @@
+/**
+ * Copyright (c) 2017, Plexteq
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ * may be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "CBaseRequestHandler.h"
+#include "../../utility/Logger.h"
+
+void CBaseRequestHandler::setResponseWriter(AHttpResponseWriter* writer)
+{
+	if (writer)
+	{
+		this->responseWriter = writer;
+		return;
+	}
+
+	throw std::invalid_argument(
+			"CBaseRequestHandler: The response writer pointer cannot be NULL");
+}
+
+void CBaseRequestHandler::process(boost::shared_ptr<tcp::socket> socket,
+		CBaseHttpRequest* request)
+{
+	std::string content = prepareContent(request);
+
+	bool isValid = validateContent(content);
+
+	CBaseHttpResponse* response = createResponse(isValid, socket, content);
+
+	writeResponse(response);
+	freeResponse(response);
+}
+
+bool CBaseRequestHandler::validateContent(std::string content)
+{
+	return content.length() > 0;
+}
+
+void CBaseRequestHandler::writeResponse(CBaseHttpResponse* response)
+{
+	if (response)
+		responseWriter->writeResponse(response);
+	else
+		Logger::error(className, "Cannot write a response! A response is NULL");
+}
+
+void CBaseRequestHandler::freeResponse(CBaseHttpResponse* response)
+{
+	delete response;
+}
+
+
