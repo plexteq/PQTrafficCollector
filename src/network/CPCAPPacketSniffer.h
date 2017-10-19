@@ -117,7 +117,16 @@ class CPCAPPacketSniffer : public APacketSniffer, public CBaseThread
 	protected:
 		virtual void handle(uint32_t ip_src, uint32_t ip_dst, u_int8_t proto, u_int16_t src_port, u_int16_t dst_port, uint16_t payload);
 	public:
-		CPCAPPacketSniffer(ABlockingQueue<T> **queues, CBaseIPResolver *ipresolver);
+		CPCAPPacketSniffer(ABlockingQueue<T> **queues, CBaseIPResolver *ipresolver):
+			CBaseThread()
+		{
+			this->queues = queues;
+			this->ipresolver = ipresolver;
+			ipHeaderSize = 0;
+			pcap_handle = NULL;
+			unit = new work_unit_t;
+		}
+
 		virtual ~CPCAPPacketSniffer() {};
 		virtual void run();
 };

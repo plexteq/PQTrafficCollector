@@ -32,19 +32,8 @@
 #include "CPCAPPacketSniffer.h"
 #include "../CConfiguration.h"
 
+template class ABlockingQueue<work_unit_t>;
 template class CPCAPPacketSniffer<work_unit_t>;
-
-template<typename T>
-CPCAPPacketSniffer<T>::CPCAPPacketSniffer(ABlockingQueue<T> **queues,
-		CBaseIPResolver *ipresolver) :
-		CBaseThread()
-{
-	this->queues = queues;
-	this->ipresolver = ipresolver;
-	ipHeaderSize = 0;
-	pcap_handle = NULL;
-	unit = new work_unit_t;
-}
 
 template<typename T>
 void CPCAPPacketSniffer<T>::pcapCallback(u_char *arg,

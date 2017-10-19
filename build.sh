@@ -21,29 +21,44 @@ echo
 echo "`green`* Setting up build dependencies `res`"
 if [[ $OS == *"debian"* ]]; then
         apt-get update
-	apt-get install wget \
-                        libboost-all-dev \
-                        libcurl4-gnutls-dev \
-                        libcunit1-dev \
-                        libpcre3 \
-                        libpcre3-dev \
-                        libtool \
-                        autoconf \
-                        automake \
-                        autoheader \
-                        unzip
-    sudo apt-get install libpcap-dev \
-			sqlite3 \
-			libsqlite3-dev \
+
+	sudo apt-get install wget \
+			libtool \
+	                autoconf \
+	                automake \
 			libexpat-dev \
-			libapr1-dev  \
-			libaprutil1-dev \
-			liblog4cpp5-dev
+	                autoheader
+
+	# installing boost
+	echo "`green`* Installing boost`res`"
+	sudo apt-get install libboost-all-dev
+	echo
+
+	# installing boost
+	echo "`green`* Installing pcap`res`"
+	sudo apt-get install libpcap-dev
+	echo
+
+	# installing sqlite3
+	echo "`green`* Installing sqlite3`res`"
+	sudo apt-get install sqlite3 libsqlite3-dev
+	echo
+
+	# installing apr
+	echo "`green`* Installing apr and apr-util`res`"
+	sudo apt-get install libapr1-dev libaprutil1-dev apache2-dev
+	sudo mv /usr/include/apr-1.0 /usr/include/apr-1
+	echo
+
+
+	# installing apr
+	echo "`green`* Installing log4cpp`res`"
+	sudo apt-get install liblog4cpp5-dev
+	echo
                         
 elif [[ $OS == *"rhel"* ]]; then
 	rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-10.noarch.rpm
 	yum install httpd-devel \
-                    pcre \
                     perl \
                     pcre-devel \
                     zlib \
@@ -51,8 +66,6 @@ elif [[ $OS == *"rhel"* ]]; then
                     GeoIP \
                     GeoIP-devel \
                     boost-devel \
-                    CUnit-devel \
-                    curl-devel \
                     wget \
                     libtool \
                     autoconf \
@@ -91,11 +104,11 @@ wget $JANSSON_URL -O ./vendor/jansson_src.zip
 echo
 echo "`green`* Building jansson`res`"
 ( \
-  cd vendor/
-  cd jansson/ \
-  autoreconf -i \
-  ./configure \
-  make \
+  cd ./vendor/; \
+  cd jansson/; \
+  autoreconf -i; \
+  ./configure; \
+  make; \
   make install \
 )
 
@@ -103,8 +116,6 @@ echo "`green`* Building jansson`res`"
 echo
 echo "`green`* Building hptc`res`"
 ( \
-  echo ls \
-  cd ../../ \ 
   make 
 )
 

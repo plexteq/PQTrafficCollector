@@ -14,6 +14,7 @@
 
 void *PQTrafficCollector::sniffer = NULL;
 
+
 void PQTrafficCollector::InitAndStart(int argc, char** argv)
 {
 	Logger::init(Logger::PriorityLevel::DEBUG);

@@ -32,6 +32,8 @@
 #include "CWorkerThread.h"
 #include <string>//for memcpy()
 
+template class WatchThread<work_unit_t>;
+template class CBaseWorkerThread<work_unit_t>;
 template class CWorkerThread<work_unit_t>;
 
 template<typename T>
@@ -173,26 +175,6 @@ host_stats_struct* CWorkerThread<K>::merge(struct packet *packet,
 	}
 
 	return sp;
-}
-
-template<typename K>
-CWorkerThread<K>::CWorkerThread(ABlockingQueue<K> *workQueue,
-		ABlockingQueue<hstat_t> *reportQueue) :
-		CBaseWorkerThread<K>(workQueue)
-{
-	this->reportQueue = reportQueue;
-
-#ifdef _MSC_VER
-	this->mutex = NULL;
-	mutex = (pthread_mutex_t*)CreateMutex(
-			NULL,              // default security attributes
-			FALSE,// initially not owned
-			NULL);// unnamed mutex
-	//mutex = 0;
-#else
-	pthread_mutex_init(mutex, NULL);
-#endif
-	stats = new hstat_t();
 }
 
 template<typename K>

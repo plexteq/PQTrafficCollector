@@ -4,26 +4,27 @@ sqlite=sqlite-autoconf-3080500
 CXX=g++
 OPTIMIZATION=-g -O0
 STD_MODE=-std=c++0x
-LDFLAGS=-Wl,-rpath,/usr/local/lib/gcc5/
+LDFLAGS=-Wall -Wl,-rpath,/usr/local/lib/gcc5/
 
+OBJ_FOLDER=objs/
 SOURCES=$(shell find src/ -name '*.cpp' -not -path "src/service/win32") 
+OBJECTS=$(patsubst src/%.cpp, $(OBJ_FOLDER)%.o, $(SOURCES))
 LIBS=-lpthread -lsqlite3 -lpcap -lapr-1 \
 -laprutil-1 -lexpat -lboost_system -lboost_filesystem -ljansson -llog4cpp
-INCLUDES=-I/usr/local/apr/include/ -I/usr/local/apr/lib/include/
-LINKER=-L/usr/local/apr/lib/ -L/usr/local/apr/lib/lib/ -L./libs/log4cpp/
+INCLUDES=
+LINKER=
 EXECUTABLE=pqtc
 
-all: src/pqtc.cpp
+DIRS:=$(patsubst src/%, $(OBJ_FOLDER)/%, $(shell find src/ -type d))
+OBJS_DIRS:=$(shell mkdir -p $(DIRS))
+
+all:$(OBJECTS)	
 	${CXX} ${OPTIMIZATION} ${STD_MODE} \
-	${INCLUDES} \
-	${LINKER} \
-	${LDFLAGS} \
-	${SOURCES} \
-	${LIBS} \
-	-o ${EXECUTABLE}
+	${INCLUDES} ${LINKER} ${LDFLAGS} \
+	-o ${EXECUTABLE} ${OBJECTS} ${LIBS}
 	
 clean:
-	rm -f ${EXECUTABLE}
+	rm -rf ${EXECUTABLE} $(OBJ_FOLDER)
 install:
 	mkdir -p /var/db/${EXECUTABLE}
 	cp -f ext/${EXECUTABLE} /etc/init.d/
@@ -40,3 +41,7 @@ reinstall:
 	cp -f ext/gettop.pl /usr/bin/
 	cp -f ext/check_ifutil.pl /etc/nagios/nvpn/
 	service ${EXECUTABLE} start
+
+
+$(OBJECTS): $(OBJ_FOLDER)%.o: src/%.cpp
+	$(CXX) $(OPTIMIZATION) $(STD_MODE) -c $< -o $@

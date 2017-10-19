@@ -110,14 +110,31 @@ private:
 
 	void handlePacket(work_unit_t *unit);
 
-	struct host_stats* merge(struct packet *packet, struct host_stats* existing);
+	struct host_stats* merge(struct packet *packet,
+			struct host_stats* existing);
 public:
 	virtual ~CWorkerThread()
 	{
 	}
 
 	CWorkerThread(ABlockingQueue<K> *workQueue,
-			ABlockingQueue<hstat_t> *reportQueue);
+			ABlockingQueue<hstat_t> *reportQueue) :
+			CBaseWorkerThread<K>(workQueue)
+	{
+		this->reportQueue = reportQueue;
+
+#ifdef _MSC_VER
+		this->mutex = NULL;
+		mutex = (pthread_mutex_t*)CreateMutex(
+				NULL,              // default security attributes
+				FALSE,// initially not owned
+				NULL);// unnamed mutex
+		//mutex = 0;
+#else
+		pthread_mutex_init(mutex, NULL);
+#endif
+		stats = new hstat_t();
+	}
 
 	virtual void run();
 
@@ -125,6 +142,5 @@ public:
 
 	hstat_t* swap();
 };
-
 
 #endif /* CWORKERTHREAD_H_ */
