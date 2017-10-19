@@ -1,6 +1,6 @@
 # PQTrafficCollector
 
-[Build Status](https://travis-ci.org/plexteq/PQTrafficCollector)
+[![Build Status] https://travis-ci.org/plexteq/PQTrafficCollector.svg?branch=develop](https://travis-ci.org/plexteq/PQTrafficCollector)
 
 # Usage
 

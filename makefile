@@ -10,7 +10,7 @@ SOURCES=$(shell find src/ -name '*.cpp' -not -path "src/service/win32")
 LIBS=-lpthread -lsqlite3 -lpcap -lapr-1 \
 -laprutil-1 -lexpat -lboost_system -lboost_filesystem -ljansson -llog4cpp
 INCLUDES=-I/usr/local/apr/include/ -I/usr/local/apr/lib/include/
-LINKER=-L/usr/local/apr/lib/ -L/usr/local/apr/lib/lib/ -L./../log4cpp/src/.libs/
+LINKER=-L/usr/local/apr/lib/ -L/usr/local/apr/lib/lib/ -L./libs/log4cpp/
 EXECUTABLE=pqtc
 
 all: src/pqtc.cpp

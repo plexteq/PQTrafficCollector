@@ -37,7 +37,8 @@ if [[ $OS == *"debian"* ]]; then
 			libsqlite3-dev \
 			libexpat-dev \
 			libapr1-dev  \
-			libaprutil1-dev
+			libaprutil1-dev \
+			liblog4cpp5-dev
                         
 elif [[ $OS == *"rhel"* ]]; then
 	rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-10.noarch.rpm
@@ -62,7 +63,8 @@ elif [[ $OS == *"rhel"* ]]; then
 		    sqlite \
 		    libexpat-devel\
 		    libapr1-devel  \
-		    libaprutil1-devel
+		    libaprutil1-devel \
+		    liblog4cpp5-devel
 else
         echo "`red`* Error`res`: current OS is not supported"
         exit 1
@@ -71,7 +73,7 @@ fi
 # cleaning up
 echo
 echo "`green`* Cleaning up from previous run `res`"
-rm -Rf vendor/{jansson,nginx}
+rm -Rf vendor/jansson
 
 # getting jansson
 echo
@@ -89,10 +91,11 @@ wget $JANSSON_URL -O ./vendor/jansson_src.zip
 echo
 echo "`green`* Building jansson`res`"
 ( \
-  cd vendor/jansson/; \
-  autoreconf -i; \
-  ./configure; \
-  make  \
+  cd vendor/
+  cd jansson/ \
+  autoreconf -i \
+  ./configure \
+  make \
   make install \
 )
 
@@ -100,6 +103,7 @@ echo "`green`* Building jansson`res`"
 echo
 echo "`green`* Building hptc`res`"
 ( \
+  echo ls \
   cd ../../ \ 
   make 
 )
