@@ -33,9 +33,27 @@
 
 #include <fstream>
 #include <sstream>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <time.h>
 
 #include "../3rdparty/tarball/tarball.h"
 #include "TimeDateHelper.h"
+
+void FileHelper::generateDBName(char* name, int size, time_t* startTime)
+{
+	if (name == NULL)
+		return;
+
+	// getting current time to form proper database file name
+	time_t *cts = startTime;
+	*cts = time(NULL);
+	struct tm datetime;
+	memcpy(&datetime, localtime(cts), sizeof(struct tm));
+
+	// forming database file name
+	strftime(name, size, "ts-%m-%Y", &datetime);
+}
 
 void FileHelper::deleteFile(string name)
 {
@@ -95,6 +113,66 @@ void FileHelper::createFolder(string name, char &error)
 	permissions(name, add_perms | owner_write | group_write | others_write);
 }
 
+int FileHelper::getFileSizePercentage(char* fileFullPath, char* fileName)
+{
+	struct stat s;
+	stat(fileName, &s);
+	long dbsize = s.st_size;
+	unsigned long long btotal = 1;
+
+#ifdef _MSC_VER
+	DWORD dwSectPerClust = 0;
+	DWORD dwBytesPerSect = 0;
+	DWORD dwFreeClusters = 0;
+	DWORD dwTotalClusters = 0;
+
+	char* disk = strtok(fileFullPath, "\\");
+
+	int res = GetDiskFreeSpaceA(disk,
+			&dwSectPerClust,
+			&dwBytesPerSect,
+			&dwFreeClusters,
+			&dwTotalClusters);
+
+	btotal = (__int64) dwTotalClusters * dwSectPerClust * dwBytesPerSect;
+#else
+	struct statvfs vs;
+
+	statvfs(fileFullPath, &vs);
+	btotal = vs.f_bsize * vs.f_blocks;
+
+#endif
+	return (dbsize * 100) / btotal;
+}
+
+int FileHelper::getFreeDiskPercentage(char* filePath)
+{
+	unsigned long long bfree = 0;
+	unsigned long long btotal = 1;
+#ifdef _MSC_VER
+	DWORD dwSectPerClust = 0;
+	DWORD dwBytesPerSect = 0;
+	DWORD dwFreeClusters = 0;
+	DWORD dwTotalClusters = 0;
+
+	char* disk = strtok(filePath, "\\");
+	int res = GetDiskFreeSpaceA(disk,
+			&dwSectPerClust,
+			&dwBytesPerSect,
+			&dwFreeClusters,
+			&dwTotalClusters);
+	btotal = (__int64)dwTotalClusters * dwSectPerClust * dwBytesPerSect;
+	bfree = (__int64)dwFreeClusters * dwSectPerClust * dwBytesPerSect;
+#else
+	struct statvfs s;
+	statvfs(filePath, &s);
+
+	bfree = s.f_bsize * s.f_bfree;
+	btotal = s.f_bsize * s.f_blocks;
+#endif
+	return (bfree * 100) / btotal;
+}
+
 void FileHelper::getAvailableDBList(
 		std::vector<boost::filesystem::path>* dbNames, string dir,
 		string activeDbFileName)
@@ -122,9 +200,9 @@ void FileHelper::getAvailableDBList(
 #ifdef _MSC_VER
 string FileHelper::getCurrentExePath()
 {
-    char buffer[MAX_PATH];
-    GetModuleFileName(NULL, buffer, MAX_PATH);
+	char buffer[MAX_PATH];
+	GetModuleFileName(NULL, buffer, MAX_PATH);
 
-    return std::string(buffer);
+	return std::string(buffer);
 }
 #endif

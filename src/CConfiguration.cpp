@@ -158,7 +158,7 @@ void CConfiguration::parseCommandLine(int argc, char** argv)
 {
 	char argname;
 
-	while ((argname = getopt(argc, argv, "t:q:i:d:p:")) != -1)
+	while ((argname = getopt(argc, argv, "t:q:i:f:p:d:")) != -1)
 	{
 		switch (argname)
 		{
@@ -180,7 +180,7 @@ void CConfiguration::parseCommandLine(int argc, char** argv)
 					string("Read value '") + optarg + string("' for ")
 							+ argname);
 			break;
-		case 'd':
+		case 'f':
 			strcpy(config->databasePath, optarg);
 			Logger::info(className,
 					string("Read value '") + optarg + string("' for ")
@@ -188,6 +188,12 @@ void CConfiguration::parseCommandLine(int argc, char** argv)
 			break;
 		case 'p':
 			config->serverPort = atoi(optarg);
+			Logger::info(className,
+					string("Read value '") + optarg + string("' for ")
+							+ argname);
+			break;
+		case 'd':
+			config->dbType = atoi(optarg);
 			Logger::info(className,
 					string("Read value '") + optarg + string("' for ")
 							+ argname);
@@ -227,6 +233,11 @@ void CConfiguration::parseCommandLine(int argc, char** argv)
 		exit(-1);
 	}
 
+	if (config->dbType != USE_MONGODB && config->dbType != USE_SQLITE)
+	{
+		config->dbType = USE_SQLITE;
+	}
+
 	if (strlen(config->databasePath) == 0)
 	{
 		Logger::error(className, "Unspecified database directory");
@@ -258,7 +269,7 @@ void CConfiguration::parseCommandLine(int argc, char** argv)
 			exit(1);
 		}
 #else
-		if (access(path, W_OK) != 0)
+		if (config->dbType == USE_SQLITE && access(path, W_OK) != 0)
 		{
 			Logger::error(className,
 					string("Database path '") + path

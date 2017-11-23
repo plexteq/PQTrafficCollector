@@ -32,7 +32,7 @@
 #include "CRequestHandler.h"
 
 #include "../../CConfiguration.h"
-#include "../../db/CSQLiteDataConnectionProvider.h"
+#include "../../db/sqlite3/CSQLiteDataConnectionProvider.h"
 #include "../../utility/FileHelper.h"
 #include "../../utility/JSONHelper.h"
 #include "../../utility/TimeDateHelper.h"

@@ -1,7 +1,7 @@
 /**
- * Copyright (c) 2014, Plexteq                                   
+ * Copyright (c) 2017, Plexteq
  * All rights reserved.
- *  
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -12,8 +12,8 @@
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the copyright holder nor the names of its contributors 
- * may be used to endorse or promote products derived from this software without 
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ * may be used to endorse or promote products derived from this software without
  * specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
@@ -29,43 +29,66 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CSQLITEDATAPROVIDER_H_
-#define CSQLITEDATAPROVIDER_H_
+#ifndef SRC_DB_MONGODB_MONGODBDATAPROVIDER_H_
+#define SRC_DB_MONGODB_MONGODBDATAPROVIDER_H_
 
-//#include "../common.h"
-#include "ADataProvider.h"
-#include "../utility/Logger.h"
+
+#include "../ADataProvider.h"
+
+#include "../../CBaseThread.h"
+#include "../../utility/Logger.h"
+#include "../../common.h"
 #include <boost/lexical_cast.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <mongocxx/client.hpp>
 
-class CSQLiteDataProvider: public ADataProvider
+typedef struct
+{
+	std::vector<bsoncxx::document::view_or_value> documents;
+	const char* tableName;
+} dbItem;
+
+typedef std::vector<dbItem> dbVector;
+
+class MongoDBDataProvider: public ADataProvider
 {
 private:
-
 	/*
 	 * A name of a logger category
 	 */
 	std::string className;
 
-	sqlite3_stmt *totals_insert_stmt;
-	sqlite3_stmt *ports_insert_stmt;
+	CBaseThread* executorThread;
+
 	ADataConnectionProvider* provider;
 
+	dbVector retryVector;
+	void insertStats(uint32_t ip, time_t ts, pstat_t* stat, int type,
+			std::vector<bsoncxx::document::view_or_value> &documents);
+
 	void insertTotals(uint32_t ip, time_t ts, struct host_stats* stats);
-	void insertPorts(uint32_t ip, time_t ts, int ptype, u_int16_t port,
+
+	void insertRecord(uint32_t ip, time_t ts, struct host_stats* stats);
+
+	bsoncxx::document::view_or_value portsToJSON(uint32_t ip, time_t ts, int ptype, u_int16_t port,
 			struct proto_stats *ps);
 
-	bool initStatements();
-	void destroyStatements();
-	void insertRecord(uint32_t ip, time_t ts, struct host_stats* stats);
+	bsoncxx::document::view_or_value totalsToJSON(uint32_t ip, time_t ts, struct host_stats* stats);
+
+	mongocxx::collection getCollection(const char* collectionName);
+
 public:
-	CSQLiteDataProvider(ADataConnectionProvider *provider);
-	virtual ~CSQLiteDataProvider();
+	MongoDBDataProvider(ADataConnectionProvider *provider);
+
+	virtual ~MongoDBDataProvider();
+
 	virtual ADataConnectionProvider* getProvider()
 	{
 		return provider;
 	}
-	;
+
 	void insertRecord(hstat_t *packet);
 };
 
-#endif /* CSQLITEDATAPROVIDER_H_ */
+
+#endif /* SRC_DB_MONGODB_MONGODBDATAPROVIDER_H_ */

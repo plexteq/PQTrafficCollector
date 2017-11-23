@@ -29,77 +29,80 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CCONFIGURATION_H_
-#define CCONFIGURATION_H_
+#ifndef CSQLITEDATACONNECTIONPROVIDER_H_
+#define CSQLITEDATACONNECTIONPROVIDER_H_
 
-#include "common.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "utility/Logger.h"
-#include <boost/lexical_cast.hpp>
-
-#define CONFIG_ARGC 5
-
-#define CONFIG_PATH "config.ini"
-
-class CConfiguration
+#include "../ADataConnectionProvider.h"
+#include "../../CBaseThread.h"
+#include "../../utility/Logger.h"
+#include <sys/stat.h>
+#ifdef _MSC_VER
+#include "..\..\win32\win_headers.h"
+#else
+#include <sys/statvfs.h>
+#include <unistd.h>
+#endif
+/*
+ * Singleton database connection manager class
+ */
+class CSQLiteDataConnectionProvider: public CBaseThread,
+		public ADataConnectionProvider
 {
 private:
-	static std::string className;
-    static CConfiguration* instance;
-    static struct configuration* config;
-    CConfiguration();
-    CConfiguration(CConfiguration&);
-    void operator = (CConfiguration const&);
-    static void parseCommandLine(int argc, char** argv);
-    static int parseConfigFile(char** argv);
-#ifdef _MSC_VER
-    static void updateCurrentDirectory(char* serviceName);
-#endif
-public:
-    ~CConfiguration();
-    static void configure(int argc, char** argv);
-    static CConfiguration* getInstance();
-    static void dump();
+	/*
+	 * A name of a logger category
+	 */
+	std::string className;
+	/*
+	 * Single class instance
+	 */
+	static CSQLiteDataConnectionProvider* instance;
 
-    /*
-     * Methods that return configuration data
-     */
-    ushort getThreads()
-    {
-        return config->threads;
-    }
-    ushort getQueues()
-    {
-        return config->queues;
-    }
-    char* getInterface()
-    {
-        return config->_interface;
-    }
-    char *getDatabasePath()
-    {
-        return config->databasePath;
-    }
-    int getLinkType()
-    {
-        return config->linkType;
-    }
-    int getServerPort()
+	/*
+	 * Private constructor (singleton)
+	 */
+	CSQLiteDataConnectionProvider() :
+			CBaseThread(), ADataConnectionProvider()
 	{
-		return config->serverPort;
+		className = string(__func__);
+		databaseFile = NULL;
+		openConnection();
+		start();
 	}
-    void setLinkType(int linkType);
-    int getPacketHeaderOffset()
-    {
-        return config->headerOffset;
-    }
 
-    int getDBType()
-    {
-        return config->dbType;
-    }
+protected:
+	virtual void openConnection();
+	virtual void closeConnection();
+
+	virtual bool isDatabaseStrucureExists();
+	virtual void createDatabaseStructure();
+
+public:
+	/*
+	 * Because of singleton we don't implement following stuff
+	 */
+	CSQLiteDataConnectionProvider(CSQLiteDataConnectionProvider&);
+	void operator =(CSQLiteDataConnectionProvider const&);
+
+	static CSQLiteDataConnectionProvider* getInstance();
+	virtual ~CSQLiteDataConnectionProvider()
+	{
+		lock();
+		closeConnection();
+		delete databaseFile;
+		unlock();
+	}
+
+	/*
+	 * Dumps configs and related stuff
+	 */
+	virtual void dump();
+
+	/*
+	 * Periodically checks date and re-creates (rolls)
+	 * database file on monthly basis
+	 */
+	virtual void run();
 };
 
-#endif /* CCONFIGURATION_H_ */
+#endif /* CSQLITEDATACONNECTIONPROVIDER_H_ */

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, Plexteq
+ * Copyright (c) 2017, Plexteq
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,15 +29,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CSQLITEDATACONNECTIONPROVIDER_H_
-#define CSQLITEDATACONNECTIONPROVIDER_H_
-//#include "../common.h"
-#include "ADataConnectionProvider.h"
-#include "../CBaseThread.h"
-#include "../utility/Logger.h"
+#ifndef SRC_DB_MONGODB_MONGODBDATACONNECTIONPROVIDER_H_
+#define SRC_DB_MONGODB_MONGODBDATACONNECTIONPROVIDER_H_
+
+#include "../ADataConnectionProvider.h"
+#include "../../CBaseThread.h"
+#include "../../utility/Logger.h"
+
+#include <mongocxx/client.hpp>
+#include <mongocxx/instance.hpp>
+
 #include <sys/stat.h>
 #ifdef _MSC_VER
-#include "..\win32\win_headers.h"
+#include "..\..\win32\win_headers.h"
 #else
 #include <sys/statvfs.h>
 #include <unistd.h>
@@ -45,69 +49,68 @@
 /*
  * Singleton database connection manager class
  */
-class CSQLiteDataConnectionProvider: public CBaseThread,
+class MongoDBDataConnectionProvider: public CBaseThread,
 		public ADataConnectionProvider
 {
 private:
+
+	mongocxx::instance mongoInstance
+	{ }; // This should be done only once.
+	mongocxx::client client;
+
 	/*
 	 * A name of a logger category
 	 */
 	std::string className;
-	/*
-	 * Full path to actively opened database file
-	 */
-	char *databaseFile;
 
 	/*
 	 * Single class instance
 	 */
-	static CSQLiteDataConnectionProvider* instance;
+	static MongoDBDataConnectionProvider* instance;
 
 	/*
 	 * Private constructor (singleton)
 	 */
-	CSQLiteDataConnectionProvider() :
+	MongoDBDataConnectionProvider() :
 			CBaseThread(), ADataConnectionProvider()
 	{
 		className = string(__func__);
-		databaseFile = NULL;
+
+		mongocxx::uri uri(CConfiguration::getInstance()->getDatabasePath());
+		client = mongocxx::client(uri);
+
 		openConnection();
 		start();
 	}
 
+	virtual bool isDatabaseStrucureExists()
+	{
+		return true;
+	}
 
-	int getFreeDiskPercentage();
-	int getDBSizePercentage();
+	virtual void createDatabaseStructure()
+	{
+	}
 
 protected:
 	virtual void openConnection();
 	virtual void closeConnection();
-	virtual void reopenConnection(bool remove);
-
-	virtual bool isDatabaseStrucureExists();
-	virtual void createDatabaseStructure();
 
 public:
 	/*
 	 * Because of singleton we don't implement following stuff
 	 */
-	CSQLiteDataConnectionProvider(CSQLiteDataConnectionProvider&);
-	void operator =(CSQLiteDataConnectionProvider const&);
+	MongoDBDataConnectionProvider(MongoDBDataConnectionProvider&);
+	void operator =(MongoDBDataConnectionProvider const&);
 
-	static CSQLiteDataConnectionProvider* getInstance();
-	virtual ~CSQLiteDataConnectionProvider()
+	static MongoDBDataConnectionProvider* getInstance();
+	virtual ~MongoDBDataConnectionProvider()
 	{
 		lock();
 		closeConnection();
-		delete databaseFile;
 		unlock();
 	}
-	;
 
-	char* getDBFileName()
-	{
-		return databaseFile;
-	}
 	/*
 	 * Dumps configs and related stuff
 	 */
@@ -120,4 +123,4 @@ public:
 	virtual void run();
 };
 
-#endif /* CSQLITEDATACONNECTIONPROVIDER_H_ */
+#endif /* SRC_DB_MONGODB_MONGODBDATACONNECTIONPROVIDER_H_ */

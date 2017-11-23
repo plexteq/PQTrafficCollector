@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, Plexteq
+ * Copyright (c) 2017, Plexteq
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,77 +29,72 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CCONFIGURATION_H_
-#define CCONFIGURATION_H_
+#include "../../CConfiguration.h"
 
-#include "common.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "utility/Logger.h"
-#include <boost/lexical_cast.hpp>
+#include "../../utility/TimeDateHelper.h"
+#include "MongoDBDataConnectionProvider.h"
+#include <mongocxx/cursor.hpp>
 
-#define CONFIG_ARGC 5
-
-#define CONFIG_PATH "config.ini"
-
-class CConfiguration
+void MongoDBDataConnectionProvider::dump()
 {
-private:
-	static std::string className;
-    static CConfiguration* instance;
-    static struct configuration* config;
-    CConfiguration();
-    CConfiguration(CConfiguration&);
-    void operator = (CConfiguration const&);
-    static void parseCommandLine(int argc, char** argv);
-    static int parseConfigFile(char** argv);
-#ifdef _MSC_VER
-    static void updateCurrentDirectory(char* serviceName);
-#endif
-public:
-    ~CConfiguration();
-    static void configure(int argc, char** argv);
-    static CConfiguration* getInstance();
-    static void dump();
+	Logger::info(className, "Dumping DB layer configuration:");
+	Logger::info(className, string("database file: ") + databaseFile);
+}
 
-    /*
-     * Methods that return configuration data
-     */
-    ushort getThreads()
-    {
-        return config->threads;
-    }
-    ushort getQueues()
-    {
-        return config->queues;
-    }
-    char* getInterface()
-    {
-        return config->_interface;
-    }
-    char *getDatabasePath()
-    {
-        return config->databasePath;
-    }
-    int getLinkType()
-    {
-        return config->linkType;
-    }
-    int getServerPort()
+void MongoDBDataConnectionProvider::openConnection()
+{
+	Logger::info(className, "Opening new database connection");
+
+	// forming database file name
+	char fileName[256];
+	FileHelper::generateDBName(fileName, sizeof(fileName),
+			&(getConnection()->ts));
+
+	databaseFile = new char[strlen(fileName)];
+	strcpy(databaseFile, fileName);
+
+	getConnection()->handle = &client;
+
+	Logger::info(className, string("database file: ") + databaseFile);
+}
+
+void MongoDBDataConnectionProvider::closeConnection()
+{
+	Logger::info(className, "Closing database connection");
+
+	getConnection()->handle = NULL;
+
+	delete databaseFile;
+	databaseFile = NULL;
+}
+
+MongoDBDataConnectionProvider* MongoDBDataConnectionProvider::getInstance()
+{
+	if (instance == NULL)
 	{
-		return config->serverPort;
+		instance = new MongoDBDataConnectionProvider();
 	}
-    void setLinkType(int linkType);
-    int getPacketHeaderOffset()
-    {
-        return config->headerOffset;
-    }
+	return instance;
+}
 
-    int getDBType()
-    {
-        return config->dbType;
-    }
-};
+void MongoDBDataConnectionProvider::run()
+{
+	while (1)
+	{
+		if (TimeDateHelper::isMonthHasChanged(&getConnection()->ts))
+		{
+			Logger::info(className, "Going to recreate stats database");
 
-#endif /* CCONFIGURATION_H_ */
+			reopenConnection(true);
+		}
+
+#ifdef _MSC_VER
+		Sleep(5 * 60 * 1000);
+#else
+		sleep(5 * 60);
+#endif
+	}
+}
+
+MongoDBDataConnectionProvider* MongoDBDataConnectionProvider::instance = NULL;
+

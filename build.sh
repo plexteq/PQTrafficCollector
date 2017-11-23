@@ -46,8 +46,7 @@ if [[ $OS == *"debian"* ]]; then
 
 	# installing apr
 	echo "`green`* Installing apr and apr-util`res`"
-	sudo apt-get install libapr1-dev libaprutil1-dev apache2-dev
-	sudo mv /usr/include/apr-1.0 /usr/include/apr-1
+	sudo apt-get install libapr1-dev libaprutil1-dev
 	echo
 
 
@@ -116,6 +115,7 @@ echo "`green`* Building jansson`res`"
 echo
 echo "`green`* Building hptc`res`"
 ( \
+  cd ../../; \ 
   make 
 )
 

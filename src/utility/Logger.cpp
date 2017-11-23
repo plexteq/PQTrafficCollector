@@ -29,6 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include "Logger.h"
+#include "log4cpp/PatternLayout.hh"
+#include "log4cpp/Layout.hh"
 
 void Logger::init(PriorityLevel priority)
 {
@@ -41,16 +43,23 @@ void Logger::init(PriorityLevel priority)
 	log4cpp::Category& root = log4cpp::Category::getRoot();
 	root.setPriority(Logger::convertToLog4Priority(priority));
 
+	log4cpp::Appender *appender = NULL;
+
 	if (fileError)
 	{
-		root.addAppender(new log4cpp::OstreamAppender("console", &std::cout));
+		appender = new log4cpp::OstreamAppender("console", &std::cout);
 		Logger::error(rootCategoryName,
 				"Cannot create a directory ./logs/. Output will be redirected to the console");
 	}
 	else
-		root.addAppender(
-				new log4cpp::FileAppender("default", "./logs/pqtc.log"));
+		appender = new log4cpp::FileAppender("default", "./logs/pqtc.log");
 
+	log4cpp::PatternLayout *layout = new log4cpp::PatternLayout();
+	layout->setConversionPattern("[%d{%d %m %Y %H:%M:%S,%l}] %c [%p]: %m%n");
+
+	appender->setLayout(layout);
+
+	root.addAppender(appender);
 	logCategories[rootCategoryName] = &log4cpp::Category::getRoot();
 
 	initialized = true;
@@ -88,9 +97,6 @@ void Logger::addSubCategory(std::string& category)
 {
 	logCategories[category] = &log4cpp::Category::getInstance(
 			std::string(category));
-
-	//logCategories[category]->addAppender(
-	//logCategories[rootCategoryName]->getAppender());
 }
 
 void Logger::info(std::string& category, std::string message)

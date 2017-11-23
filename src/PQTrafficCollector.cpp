@@ -6,14 +6,16 @@
 #include "network/CWorkerThread.h"
 #include "network/CPCAPPacketSniffer.h"
 #include "network/CAggregatorThread.h"
-#include "db/CSQLiteDataConnectionProvider.h"
-#include "db/CSQLiteDataProvider.h"
+#include "db/sqlite3/CSQLiteDataConnectionProvider.h"
+#include "db/sqlite3/CSQLiteDataProvider.h"
 #include "utility/Logger.h"
 #include "webserver/CHttpServerConfiguration.h"
 #include "webserver/CHttpServer.h"
 
-void *PQTrafficCollector::sniffer = NULL;
+#include "db/mongodb/MongoDBDataConnectionProvider.h"
+#include "db/mongodb/MongoDBDataProvider.h"
 
+void *PQTrafficCollector::sniffer = NULL;
 
 void PQTrafficCollector::InitAndStart(int argc, char** argv)
 {
@@ -26,14 +28,26 @@ void PQTrafficCollector::InitAndStart(int argc, char** argv)
 	 */
 	apr_initialize();
 
+	ADataConnectionProvider *connectionProvider = NULL;
+	ADataProvider *dataProvider = NULL;
+
 	/**
 	 * Initialize DB connection
 	 */
-	ADataConnectionProvider *connectionProvider =
-			CSQLiteDataConnectionProvider::getInstance();
-	connectionProvider->dump();
+	switch (CConfiguration::getInstance()->getDBType())
+	{
+	case USE_MONGODB:
+		connectionProvider = MongoDBDataConnectionProvider::getInstance();
+		dataProvider = new MongoDBDataProvider(connectionProvider);
+		break;
 
-	ADataProvider *dataProvider = new CSQLiteDataProvider(connectionProvider);
+	case USE_SQLITE:
+	default:
+		connectionProvider = CSQLiteDataConnectionProvider::getInstance();
+		dataProvider = new CSQLiteDataProvider(connectionProvider);
+		break;
+
+	}
 
 	/*
 	 * Creating IP resolver

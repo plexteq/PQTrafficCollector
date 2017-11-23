@@ -2,17 +2,19 @@ remoteurl=http://www.sqlite.org/2014
 sqlite=sqlite-autoconf-3080500
 
 CXX=g++
-OPTIMIZATION=-g -O0
+OPTIMIZATION=-g -O0 -fpermissive
 STD_MODE=-std=c++0x
-LDFLAGS=-Wall -Wl,-rpath,/usr/local/lib/gcc5/
+LDFLAGS=-Wall -Wl,-rpath,/usr/local/lib/gcc5/ -Wl,-rpath,/usr/local/lib/
 
 OBJ_FOLDER=objs/
 SOURCES=$(shell find src/ -name '*.cpp' -not -path "src/service/win32") 
 OBJECTS=$(patsubst src/%.cpp, $(OBJ_FOLDER)%.o, $(SOURCES))
 LIBS=-lpthread -lsqlite3 -lpcap -lapr-1 \
--laprutil-1 -lexpat -lboost_system -lboost_filesystem -ljansson -llog4cpp
-INCLUDES=
-LINKER=
+-laprutil-1 -lexpat -lboost_system -lboost_filesystem -ljansson -llog4cpp -lmongocxx -lbsoncxx
+INCLUDES= -I/usr/local/include/mongocxx/v_noabi \
+    -I/usr/local/include/bsoncxx/v_noabi \
+    -I/usr/local/include/v_noabi/
+LINKER=-L/usr/local/lib
 EXECUTABLE=pqtc
 
 DIRS:=$(patsubst src/%, $(OBJ_FOLDER)/%, $(shell find src/ -type d))
@@ -42,6 +44,5 @@ reinstall:
 	cp -f ext/check_ifutil.pl /etc/nagios/nvpn/
 	service ${EXECUTABLE} start
 
-
 $(OBJECTS): $(OBJ_FOLDER)%.o: src/%.cpp
-	$(CXX) $(OPTIMIZATION) $(STD_MODE) -c $< -o $@
+	$(CXX) $(OPTIMIZATION) $(STD_MODE) $(INCLUDES) $(LINKER) -c $< -o $@ $(LIBS)

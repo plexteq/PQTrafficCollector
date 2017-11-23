@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, Plexteq
+ * Copyright (c) 2017, Plexteq
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,77 +29,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CCONFIGURATION_H_
-#define CCONFIGURATION_H_
+#ifndef SRC_DB_MONGODB_CEXECUTORTHREAD_H_
+#define SRC_DB_MONGODB_CEXECUTORTHREAD_H_
 
-#include "common.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "utility/Logger.h"
-#include <boost/lexical_cast.hpp>
+#include "../../common.h"
+#include "../../CBaseThread.h"
+#include "../ADataConnectionProvider.h"
+#include "MongoDBDataProvider.h"
 
-#define CONFIG_ARGC 5
-
-#define CONFIG_PATH "config.ini"
-
-class CConfiguration
+class CExecutorThread : public CBaseThread
 {
-private:
-	static std::string className;
-    static CConfiguration* instance;
-    static struct configuration* config;
-    CConfiguration();
-    CConfiguration(CConfiguration&);
-    void operator = (CConfiguration const&);
-    static void parseCommandLine(int argc, char** argv);
-    static int parseConfigFile(char** argv);
-#ifdef _MSC_VER
-    static void updateCurrentDirectory(char* serviceName);
-#endif
+	/*
+	 * A name of a logger category
+	 */
+	std::string className_;
+	ADataConnectionProvider *provider;
+	dbVector *retryVector;
+	int sleepTime = 60;
+
+	void handleDocuments();
 public:
-    ~CConfiguration();
-    static void configure(int argc, char** argv);
-    static CConfiguration* getInstance();
-    static void dump();
 
-    /*
-     * Methods that return configuration data
-     */
-    ushort getThreads()
-    {
-        return config->threads;
-    }
-    ushort getQueues()
-    {
-        return config->queues;
-    }
-    char* getInterface()
-    {
-        return config->_interface;
-    }
-    char *getDatabasePath()
-    {
-        return config->databasePath;
-    }
-    int getLinkType()
-    {
-        return config->linkType;
-    }
-    int getServerPort()
-	{
-		return config->serverPort;
-	}
-    void setLinkType(int linkType);
-    int getPacketHeaderOffset()
-    {
-        return config->headerOffset;
-    }
+	CExecutorThread(ADataConnectionProvider *provider,
+			dbVector *retryVector, int sleepTime);
+	virtual ~CExecutorThread();
 
-    int getDBType()
-    {
-        return config->dbType;
-    }
+	virtual void run();
 };
 
-#endif /* CCONFIGURATION_H_ */
+#endif /* SRC_DB_MONGODB_CEXECUTORTHREAD_H_ */

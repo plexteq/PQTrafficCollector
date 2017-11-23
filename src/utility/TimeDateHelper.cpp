@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, Plexteq
+ * Copyright (c) 2017, Plexteq
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,77 +29,49 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CCONFIGURATION_H_
-#define CCONFIGURATION_H_
+#include "Logger.h"
+#include "TimeDateHelper.h"
 
-#include "common.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "utility/Logger.h"
-#include <boost/lexical_cast.hpp>
-
-#define CONFIG_ARGC 5
-
-#define CONFIG_PATH "config.ini"
-
-class CConfiguration
+long long TimeDateHelper::getCurrentTimeS()
 {
-private:
-	static std::string className;
-    static CConfiguration* instance;
-    static struct configuration* config;
-    CConfiguration();
-    CConfiguration(CConfiguration&);
-    void operator = (CConfiguration const&);
-    static void parseCommandLine(int argc, char** argv);
-    static int parseConfigFile(char** argv);
-#ifdef _MSC_VER
-    static void updateCurrentDirectory(char* serviceName);
+#ifndef _MSC_VER
+	struct timeval tp;
+	gettimeofday(&tp, 0);
+	return tp.tv_sec;
+#else
+	return GetCurrentTime() / 1000;
 #endif
-public:
-    ~CConfiguration();
-    static void configure(int argc, char** argv);
-    static CConfiguration* getInstance();
-    static void dump();
+}
 
-    /*
-     * Methods that return configuration data
-     */
-    ushort getThreads()
-    {
-        return config->threads;
-    }
-    ushort getQueues()
-    {
-        return config->queues;
-    }
-    char* getInterface()
-    {
-        return config->_interface;
-    }
-    char *getDatabasePath()
-    {
-        return config->databasePath;
-    }
-    int getLinkType()
-    {
-        return config->linkType;
-    }
-    int getServerPort()
+long long TimeDateHelper::getCurrentTimestamp()
+{
+#ifndef _MSC_VER
+	struct timeval tp;
+	gettimeofday(&tp, 0);
+	return tp.tv_sec * 1000 + tp.tv_usec / 1000;
+#else
+	return GetCurrentTime();
+#endif
+}
+
+bool TimeDateHelper::isMonthHasChanged(time_t *startTime)
+{
+	time_t currentTs = time(NULL);
+
+	struct tm currentDt, connectionDt;
+	memcpy(&currentDt, localtime(&currentTs), sizeof(struct tm));
+	memcpy(&connectionDt, localtime(startTime), sizeof(struct tm));
+
+	if (currentDt.tm_mon != connectionDt.tm_mon)
 	{
-		return config->serverPort;
+		std::string className = string(__func__);
+
+		std::stringstream strm;
+		strm << "Month has changed " << currentDt.tm_mon << " -> "
+				<< connectionDt.tm_mon;
+
+		Logger::info(className, strm.str());
+		return true;
 	}
-    void setLinkType(int linkType);
-    int getPacketHeaderOffset()
-    {
-        return config->headerOffset;
-    }
-
-    int getDBType()
-    {
-        return config->dbType;
-    }
-};
-
-#endif /* CCONFIGURATION_H_ */
+	return false;
+}

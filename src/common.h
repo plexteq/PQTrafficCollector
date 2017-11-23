@@ -80,6 +80,10 @@ using namespace std;
 #define DISK_FREE_PRCNT_THRESHOLD 20
 #define DBFILE_SIZE_PRCNT_THRESHOLD 1
 
+#define USE_MONGODB 1
+#define USE_SQLITE 2
+
+
 /*
  * Stores program settings
  */
@@ -115,6 +119,11 @@ struct configuration
 	 * Path to read/write database files
 	 */
 	char databasePath[512];
+
+	/*
+	 * Type of a used DB: 1 - MongoDB, 2 - SQLite3
+	 */
+	int dbType;
 
 	/*
 	 * Port on which server will provide a status
@@ -302,9 +311,9 @@ typedef map<uint32_t, struct host_stats*> hstat_t;
 struct dbh_t
 {
 	/*
-	 * SQLite handle
+	 * The DB connector handler
 	 */
-	sqlite3 *handle;
+	void *handle;
 
 	/*
 	 * Mutex to lock this handle on concurrent operations

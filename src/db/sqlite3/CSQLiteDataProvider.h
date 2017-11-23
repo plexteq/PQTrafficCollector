@@ -1,7 +1,7 @@
 /**
- * Copyright (c) 2017, Plexteq
+ * Copyright (c) 2014, Plexteq                                   
  * All rights reserved.
- *
+ *  
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -12,8 +12,8 @@
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the copyright holder nor the names of its contributors
- * may be used to endorse or promote products derived from this software without
+ * 3. Neither the name of the copyright holder nor the names of its contributors 
+ * may be used to endorse or promote products derived from this software without 
  * specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
@@ -29,42 +29,42 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SRC_UTILITY_TIMEDATEHELPER_H_
-#define SRC_UTILITY_TIMEDATEHELPER_H_
+#ifndef CSQLITEDATAPROVIDER_H_
+#define CSQLITEDATAPROVIDER_H_
 
-#ifndef _MSC_VER
-#include <sys/time.h>
-#else
-#include "..\win32\win_headers.h"
-#include <time.h>
-#endif
+#include "../ADataProvider.h"
+#include "../../utility/Logger.h"
+#include <boost/lexical_cast.hpp>
 
-#include "Logger.h"
-
-class TimeDateHelper
+class CSQLiteDataProvider: public ADataProvider
 {
+private:
+
+	/*
+	 * A name of a logger category
+	 */
+	std::string className;
+
+	sqlite3_stmt *totals_insert_stmt;
+	sqlite3_stmt *ports_insert_stmt;
+	ADataConnectionProvider* provider;
+
+	void insertTotals(uint32_t ip, time_t ts, struct host_stats* stats);
+	void insertPorts(uint32_t ip, time_t ts, int ptype, u_int16_t port,
+			struct proto_stats *ps);
+
+	bool initStatements();
+	void destroyStatements();
+	void insertRecord(uint32_t ip, time_t ts, struct host_stats* stats);
 public:
-	/* Return a current timestamp in seconds
-	 *
-	 * Parameters:
-	 *
-	 * Return value:
-	 * 		long long: a current timestamp in seconds
-	 *
-	 * */
-	static long long getCurrentTimeS();
+	CSQLiteDataProvider(ADataConnectionProvider *provider);
+	virtual ~CSQLiteDataProvider();
+	virtual ADataConnectionProvider* getProvider()
+	{
+		return provider;
+	}
 
-	/* Return a current timestamp in miliseconds
-	 *
-	 * Parameters:
-	 *
-	 * Return value:
-	 * 		long long: a current timestamp in miliseconds
-	 *
-	 * */
-	static long long getCurrentTimestamp();
-
-	static bool isMonthHasChanged(time_t *startTime);
+	void insertRecord(hstat_t *packet);
 };
 
-#endif /* SRC_UTILITY_TIMEDATEHELPER_H_ */
+#endif /* CSQLITEDATAPROVIDER_H_ */

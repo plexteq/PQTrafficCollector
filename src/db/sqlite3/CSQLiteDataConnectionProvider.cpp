@@ -28,8 +28,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "../CConfiguration.h"
+#include "../../CConfiguration.h"
 
+#include "../../utility/TimeDateHelper.h"
 #include "CSQLiteDataConnectionProvider.h"
 
 void CSQLiteDataConnectionProvider::dump()
@@ -42,16 +43,10 @@ void CSQLiteDataConnectionProvider::openConnection()
 {
 	Logger::info(className, "Opening new database connection");
 
-	// getting current time to form proper database file name
-	time_t *cts = &(getConnection()->ts);
-	*cts = time(NULL);
-
-	struct tm datetime;
-	memcpy(&datetime, localtime(cts), sizeof(struct tm));
-
-	// forming database file name
 	char fileName[256];
-	strftime(fileName, sizeof(fileName), "ts-%m-%Y.sl3", &datetime);
+	FileHelper::generateDBName(fileName, sizeof(fileName),
+			&(getConnection()->ts));
+
 	databaseFile = new char[strlen(
 			CConfiguration::getInstance()->getDatabasePath()) + strlen(fileName)
 			+ 1];
@@ -78,7 +73,7 @@ void CSQLiteDataConnectionProvider::openConnection()
 
 void CSQLiteDataConnectionProvider::closeConnection()
 {
-	Logger::info(className,"Closing database connection");
+	Logger::info(className, "Closing database connection");
 
 	if (getConnection()->handle != NULL)
 		sqlite3_close(getConnection()->handle);
@@ -114,7 +109,7 @@ bool CSQLiteDataConnectionProvider::isDatabaseStrucureExists()
 
 void CSQLiteDataConnectionProvider::createDatabaseStructure()
 {
-	Logger::info(className,"Opened database is empty, creating tables");
+	Logger::info(className, "Opened database is empty, creating tables");
 
 	// creating tables
 	sqlite3_exec(getConnection()->handle,
@@ -142,26 +137,18 @@ void CSQLiteDataConnectionProvider::run()
 {
 	while (1)
 	{
-		time_t currentTs = time(NULL), connectionTs = getConnection()->ts;
-
-		struct tm currentDt, connectionDt;
-		memcpy(&currentDt, localtime(&currentTs), sizeof(struct tm));
-		memcpy(&connectionDt, localtime(&connectionTs), sizeof(struct tm));
-
-		if (currentDt.tm_mon != connectionDt.tm_mon)
+		if (TimeDateHelper::isMonthHasChanged(&getConnection()->ts))
 		{
-			std::stringstream strm;
-			strm << "Month has changed " << currentDt.tm_mon << " -> "
-					<< connectionDt.tm_mon;
-
-			Logger::info(className, strm.str());
 			Logger::info(className, "Going to recreate stats database");
 
 			reopenConnection(true);
 		}
 
-		if (getFreeDiskPercentage() < DISK_FREE_PRCNT_THRESHOLD
-				&& getDBSizePercentage() > DBFILE_SIZE_PRCNT_THRESHOLD)
+		if (FileHelper::getFreeDiskPercentage(
+				CConfiguration::getInstance()->getDatabasePath()) < DISK_FREE_PRCNT_THRESHOLD
+				&& FileHelper::getFileSizePercentage(
+						CConfiguration::getInstance()->getDatabasePath(),
+						databaseFile) > DBFILE_SIZE_PRCNT_THRESHOLD)
 		{
 			std::stringstream strm;
 
@@ -191,83 +178,5 @@ void CSQLiteDataConnectionProvider::run()
 	}
 }
 
-int CSQLiteDataConnectionProvider::getFreeDiskPercentage()
-{
-	unsigned long long bfree = 0;
-	unsigned long long btotal = 1;
-#ifdef _MSC_VER
-	DWORD dwSectPerClust = 0;
-	DWORD dwBytesPerSect = 0;
-	DWORD dwFreeClusters = 0;
-	DWORD dwTotalClusters = 0;
-
-	char* disk = strtok(CConfiguration::getInstance()->getDatabasePath(), "\\");
-	int res = GetDiskFreeSpaceA(disk,
-			&dwSectPerClust,
-			&dwBytesPerSect,
-			&dwFreeClusters,
-			&dwTotalClusters);
-	btotal = (__int64)dwTotalClusters * dwSectPerClust * dwBytesPerSect;
-	bfree = (__int64)dwFreeClusters * dwSectPerClust * dwBytesPerSect;
-#else
-	struct statvfs s;
-	statvfs(CConfiguration::getInstance()->getDatabasePath(), &s);
-
-	bfree = s.f_bsize * s.f_bfree;
-	btotal = s.f_bsize * s.f_blocks;
-#endif
-	return (bfree * 100) / btotal;
-}
-
-int CSQLiteDataConnectionProvider::getDBSizePercentage()
-{
-	struct stat s;
-	stat(databaseFile, &s);
-	long dbsize = s.st_size;
-	unsigned long long btotal = 1;
-
-#ifdef _MSC_VER
-	DWORD dwSectPerClust = 0;
-	DWORD dwBytesPerSect = 0;
-	DWORD dwFreeClusters = 0;
-	DWORD dwTotalClusters = 0;
-
-	char* disk = strtok(CConfiguration::getInstance()->getDatabasePath(), "\\");
-
-	int res = GetDiskFreeSpaceA(disk,
-			&dwSectPerClust,
-			&dwBytesPerSect,
-			&dwFreeClusters,
-			&dwTotalClusters);
-
-	btotal = (__int64) dwTotalClusters * dwSectPerClust * dwBytesPerSect;
-#else
-	struct statvfs vs;
-
-	statvfs(CConfiguration::getInstance()->getDatabasePath(), &vs);
-	btotal = vs.f_bsize * vs.f_blocks;
-
-#endif
-	return (dbsize * 100) / btotal;
-}
-
-void CSQLiteDataConnectionProvider::reopenConnection(bool remove)
-{
-	char* _db = strdup(databaseFile);
-
-	lock();
-	closeConnection();
-
-	if (remove)
-		unlink(_db);
-
-	openConnection();
-	unlock();
-
-	free(_db);
-}
-
 CSQLiteDataConnectionProvider* CSQLiteDataConnectionProvider::instance = NULL;
-
-
 

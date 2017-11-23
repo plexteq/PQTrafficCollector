@@ -73,7 +73,7 @@ public:
 	/* Create a folder with specified 'name' if it not exists.
 	 *
 	 * Parameters:
-	 * name  - [In]  	a pass and name of a new folder
+	 * name  - [In]  	a path and name of a new folder
 	 * error - [Out]	passed by value char variable which will store an error code,
 	 * 					if an error occurred
 	 *
@@ -84,7 +84,7 @@ public:
 	/* Remove a file by 'name' if it exists.
 	 *
 	 * Parameters:
-	 * name  - [In] a pass to the file for deletion
+	 * name  - [In] a path to the file for deletion
 	 *
 	 * Return value: void
 	 * */
@@ -93,7 +93,7 @@ public:
 	/* Check if a file by 'name' exists.
 	 *
 	 * Parameters:
-	 * name  - [In] a pass to the file
+	 * name  - [In] a path to the file
 	 *
 	 * Return value:
 	 * 		bool: true - if exists, false - if not exists
@@ -101,8 +101,33 @@ public:
 	 * */
 	static bool fileExist(string fileName);
 
+	/* Return an amount of used by file memory, in percents
+	 *
+	 * Parameters:
+	 * fileFullPath - [In] a full path to the file
+	 * fileName  	- [In] a file name
+	 *
+	 * Return value:
+	 * 		int: an amount of used memory in percents
+	 *
+	 * */
+	static int getFileSizePercentage(char* fileFullPath, char* fileName);
+
+	/* Return an amount of free memory on a disk where a file 'filePath' is stored
+	 *
+	 * Parameters:
+	 * filePath  - [In] a path to the file
+	 *
+	 * Return value:
+	 * 		int: an amount of free memory in percents
+	 *
+	 * */
+	static int getFreeDiskPercentage(char* filePath);
+
+	static void generateDBName(char* name, int size, time_t* startTime);
+
 #ifdef _MSC_VER
-    static string getCurrentExePath();
+	static string getCurrentExePath();
 #endif
 };
 

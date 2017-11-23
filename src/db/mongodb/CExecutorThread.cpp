@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, Plexteq
+ * Copyright (c) 2017, Plexteq
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,77 +29,66 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CCONFIGURATION_H_
-#define CCONFIGURATION_H_
+#include "CExecutorThread.h"
 
-#include "common.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "utility/Logger.h"
-#include <boost/lexical_cast.hpp>
+#include <mongocxx/client.hpp>
+#include "../../utility/Logger.h"
 
-#define CONFIG_ARGC 5
-
-#define CONFIG_PATH "config.ini"
-
-class CConfiguration
+CExecutorThread::CExecutorThread(ADataConnectionProvider *provider,
+		dbVector *retryVector, int sleepTime)
 {
-private:
-	static std::string className;
-    static CConfiguration* instance;
-    static struct configuration* config;
-    CConfiguration();
-    CConfiguration(CConfiguration&);
-    void operator = (CConfiguration const&);
-    static void parseCommandLine(int argc, char** argv);
-    static int parseConfigFile(char** argv);
-#ifdef _MSC_VER
-    static void updateCurrentDirectory(char* serviceName);
-#endif
-public:
-    ~CConfiguration();
-    static void configure(int argc, char** argv);
-    static CConfiguration* getInstance();
-    static void dump();
+	this->className_ = string(__func__);
+	this->provider = provider;
+	this->retryVector = retryVector;
+	this->sleepTime = sleepTime;
+}
 
-    /*
-     * Methods that return configuration data
-     */
-    ushort getThreads()
-    {
-        return config->threads;
-    }
-    ushort getQueues()
-    {
-        return config->queues;
-    }
-    char* getInterface()
-    {
-        return config->_interface;
-    }
-    char *getDatabasePath()
-    {
-        return config->databasePath;
-    }
-    int getLinkType()
-    {
-        return config->linkType;
-    }
-    int getServerPort()
+CExecutorThread::~CExecutorThread()
+{
+	// TODO Auto-generated destructor stub
+}
+
+void CExecutorThread::run()
+{
+	while (true)
 	{
-		return config->serverPort;
+#ifdef _MSC_VER
+		Sleep(this->sleepTime * 1000);
+#else
+		sleep(this->sleepTime);
+#endif
+		provider->lock();
+
+		try
+		{
+			if (retryVector->size() > 0)
+				handleDocuments();
+
+		} catch (std::exception& ex)
+		{
+			Logger::error(className_, "Cannot insert documents to the database");
+			Logger::error(className_, ex.what());
+		}
+
+		provider->unlock();
 	}
-    void setLinkType(int linkType);
-    int getPacketHeaderOffset()
-    {
-        return config->headerOffset;
-    }
+}
 
-    int getDBType()
-    {
-        return config->dbType;
-    }
-};
+void CExecutorThread::handleDocuments()
+{
+	char* dbName = provider->getDBFileName();
 
-#endif /* CCONFIGURATION_H_ */
+	mongocxx::client* client =
+			(mongocxx::client*) provider->getConnection()->handle;
+	mongocxx::database db = (*client)[dbName];
+
+	for (dbVector::iterator i = retryVector->begin(); i != retryVector->end();
+			++i)
+	{
+		mongocxx::collection coll = db[i->tableName];
+
+		coll.insert_many(i->documents);
+
+		i = retryVector->erase(i);
+	}
+}

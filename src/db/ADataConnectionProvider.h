@@ -46,11 +46,34 @@ class ADataConnectionProvider
 		 */
 		dbh_t* connection;
 
+
 	protected:
+		/*
+		 * Full path to actively opened database file
+		 */
+		char *databaseFile;
+
 		virtual bool isDatabaseStrucureExists() = 0;
 		virtual void createDatabaseStructure() = 0;
+		virtual void reopenConnection(bool remove)
+		{
+			char* _db = strdup(databaseFile);
+
+				lock();
+				closeConnection();
+
+				if (remove)
+					unlink(_db);
+
+				openConnection();
+				unlock();
+
+				free(_db);
+
+		}
 
 	public:
+		char* getDBFileName() { return databaseFile; }
 		virtual void openConnection() = 0;
 		virtual void closeConnection() = 0;
 		virtual void dump() = 0;
@@ -75,6 +98,7 @@ class ADataConnectionProvider
 
 		ADataConnectionProvider()
 		{
+			databaseFile = NULL;
 			connection = new dbh_t;
 #ifdef _MSC_VER
             connection->mutex = CreateMutex(NULL, false, NULL);
